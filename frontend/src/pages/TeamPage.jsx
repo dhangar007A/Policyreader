@@ -4,40 +4,40 @@ import { Mail, Linkedin, Github, Users } from 'lucide-react';
 const TeamPage = () => {
   const teamMembers = [
     {
-      name: "Dr. Sarah Chen",
-      role: "CEO & AI Research Lead",
-      image: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop&crop=face",
-      bio: "PhD in Machine Learning from Stanford. Former AI researcher at Google with 10+ years in NLP and document processing.",
+      name: "Bilal khan",
+      role: "AI/ML Expert",
+      image: "#",
+      bio: "Learner under the guidance of abhisheksingh. Passionate about AI and its applications in insurance.",
       linkedin: "#",
       github: "#",
-      email: "sarah@policyassistant.ai"
+      email: "prabhatsingh1112004@gmail.com"
     },
     {
-      name: "Michael Rodriguez",
-      role: "CTO & Full Stack Developer",
-      image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face",
-      bio: "Full-stack engineer with expertise in React, Node.js, and cloud architecture. Previously led engineering teams at fintech startups.",
+      name: "prabhat singh",
+      role: "API Developer & Backend Engineer",
+      image: "#",
+      bio: "learner under the guidance of abhisheksingh. Focused on backend systems and API development.",
       linkedin: "#",
       github: "#",
-      email: "michael@policyassistant.ai"
+      email: "#"
     },
     {
-      name: "Dr. Priya Patel",
-      role: "Head of Product & Insurance Expert",
-      image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face",
-      bio: "15 years in insurance industry with deep expertise in policy analysis and regulatory compliance. MBA from Wharton.",
+      name: "Himanshu patel",
+      role: "API Developer & Backend Engineer",
+      image: "#",
+      bio: "learner under the guidance of abhisheksingh. Specializes in backend development and API integration.",
       linkedin: "#",
       github: "#",
-      email: "priya@policyassistant.ai"
+      email: "dhangarsingh007@gmail.com"
     },
     {
-      name: "James Wilson",
-      role: "Lead Data Scientist",
-      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face",
-      bio: "Data scientist specializing in ML model optimization and deployment. Expert in Python, TensorFlow, and cloud ML platforms.",
+      name: "Abhisheksingh",
+      role: "Full Stack Technical Lead",
+      image: "#",
+      bio: "Full Stack Developer and Technical Lead with a passion for AI and insurance technology. Leading the team to build innovative solutions.",
       linkedin: "#",
       github: "#",
-      email: "james@policyassistant.ai"
+      email: "abhisheksinghdhangar007@gmail.com"
     }
   ];
 
