@@ -29,35 +29,35 @@ class IntelligentQuerySystem:
         
         # Define the RAG prompt template
         self.prompt_template = ChatPromptTemplate.from_template("""
-You are an expert AI assistant specializing in insurance, legal, HR, and compliance domains. 
-Your task is to answer queries based on the provided document context.
+            You are an expert AI assistant specializing in insurance, legal, HR, and compliance domains. 
+            Your task is to answer queries based on the provided document context.
 
-## Context:
-The following documents have been retrieved based on the user's query:
-{documents}
+            ## Context:
+            The following documents have been retrieved based on the user's query:
+            {documents}
 
-## User Query:
-{query}
+            ## User Query:
+            {query}
 
-## Instructions:
-1. Analyze the provided documents carefully
-2. Extract relevant information that directly addresses the query
-3. If the documents don't contain sufficient information, state this clearly
-4. Provide specific references to document sections when possible
-5. Classify the domain (insurance, legal, hr, compliance)
-6. Explain your reasoning process
+            ## Instructions:
+            1. Analyze the provided documents carefully
+            2. Extract relevant information that directly addresses the query
+            3. If the documents don't contain sufficient information, state this clearly
+            4. Provide specific references to document sections when possible
+            5. Classify the domain (insurance, legal, hr, compliance)
+            6. Explain your reasoning process
 
-## Response Format:
-Provide a structured response with:
-- Clear, concise answer
-- Confidence level (0-1)
-- Source documents used
-- Reasoning process
-- Relevant clauses/sections
-- Domain classification
+            ## Response Format:
+            Provide a structured response with:
+            - Clear, concise answer
+            - Confidence level (0-1)
+            - Source documents used
+            - Reasoning process
+            - Relevant clauses/sections
+            - Domain classification
 
-## Response:
-""")
+            ## Response:
+        """)
         
         self.chain = self.prompt_template | self.llm | self.parser
     
@@ -123,10 +123,9 @@ Provide a structured response with:
         
         for i, chunk in enumerate(chunks):
             context_part = f"""
-Document {i+1}: {chunk.source}
-{'='*50}
-Content: {chunk.content}
-"""
+                Document {i+1}: {chunk.source}{'='*50}
+                Content: {chunk.content}
+            """
             if chunk.page_number:
                 context_part += f"Page: {chunk.page_number}\n"
             if chunk.section:
