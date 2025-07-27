@@ -21,11 +21,10 @@ class QueryResponse(BaseModel):
 class IntelligentQuerySystem:
     """Main RAG system for intelligent query processing."""
     
-    def __init__(self, llm_model: str = "deepseek-r1:latest"):
+    def __init__(self, llm_model: str = "llama3.2:3b"):
         self.llm = OllamaLLM(model=llm_model)
         self.document_processor = DocumentProcessor()
         self.vector_store = VectorStore()
-        self.parser = PydanticOutputParser(pydantic_object=QueryResponse)
         
         # Define the RAG prompt template
         self.prompt_template = ChatPromptTemplate.from_template("""
@@ -47,19 +46,13 @@ class IntelligentQuerySystem:
             5. Classify the domain (insurance, legal, hr, compliance)
             6. Explain your reasoning process
 
-            ## Response Format:
-            Provide a structured response with:
-            - Clear, concise answer
-            - Confidence level (0-1)
-            - Source documents used
-            - Reasoning process
-            - Relevant clauses/sections
-            - Domain classification
+## Response Format:
+Provide a clear, concise answer based on the document context. If the documents don't contain relevant information, state this clearly.
 
             ## Response:
         """)
         
-        self.chain = self.prompt_template | self.llm | self.parser
+        self.chain = self.prompt_template | self.llm
     
     def add_documents(self, directory_path: str):
         """Process and add documents to the system."""
@@ -99,11 +92,32 @@ class IntelligentQuerySystem:
         
         # Generate response using LLM
         try:
-            response = self.chain.invoke({
+            llm_response = self.chain.invoke({
                 "documents": context,
                 "query": user_query
             })
-            return response
+            
+            # Extract the answer from the LLM response
+            answer = llm_response.content if hasattr(llm_response, 'content') else str(llm_response)
+            
+            # Determine confidence based on number of relevant chunks
+            confidence = min(len(relevant_chunks) / top_k, 1.0)
+            
+            # Determine domain based on content analysis
+            domain = self._classify_domain(user_query, answer)
+            
+            # Extract relevant clauses (first few words of each chunk)
+            relevant_clauses = [chunk.content[:100] + "..." for chunk in relevant_chunks[:3]]
+            
+            return QueryResponse(
+                answer=answer,
+                confidence=confidence,
+                sources=[chunk.source for chunk in relevant_chunks],
+                reasoning=f"Found {len(relevant_chunks)} relevant document chunks that match the query.",
+                relevant_clauses=relevant_clauses,
+                domain=domain,
+                timestamp=datetime.now().isoformat()
+            )
             
         except Exception as e:
             print(f"Error generating response: {e}")
@@ -165,3 +179,18 @@ class IntelligentQuerySystem:
             response = self.query(query)
             responses.append(response)
         return responses 
+
+    def _classify_domain(self, query: str, answer: str) -> str:
+        """Classify the domain based on query and answer content."""
+        content = (query + " " + answer).lower()
+        
+        if any(word in content for word in ["policy", "coverage", "claim", "premium", "insurance"]):
+            return "insurance"
+        elif any(word in content for word in ["contract", "agreement", "clause", "legal", "compliance"]):
+            return "legal"
+        elif any(word in content for word in ["employment", "employee", "benefits", "salary", "hr"]):
+            return "hr"
+        elif any(word in content for word in ["regulation", "compliance", "audit", "safety", "training"]):
+            return "compliance"
+        else:
+            return "unknown" 
