@@ -48,6 +48,13 @@ Examples:
     )
     
     parser.add_argument(
+        "--port", 
+        type=int,
+        default=8000,
+        help="Port for API server (default: 8000)"
+    )
+    
+    parser.add_argument(
         "--test", 
         action="store_true",
         help="Run system tests"
@@ -69,10 +76,10 @@ Examples:
     
     # Start API server
     if args.api:
-        print("Starting API server...")
+        print(f"Starting API server on port {args.port}...")
         from api_server import app
         import uvicorn
-        uvicorn.run(app, host="0.0.0.0", port=8000)
+        uvicorn.run(app, host="0.0.0.0", port=args.port)
         return
     
     # Run demo
