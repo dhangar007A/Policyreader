@@ -25,3 +25,4 @@ pydantic
 # For API endpoints
 fastapi
 uvicorn
+python-multipart
