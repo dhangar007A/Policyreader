@@ -1,177 +1,333 @@
-// API Service for handling all API calls and data processing
-
 /**
- * Simulates API delay for realistic user experience
- * @param {number} ms - Delay in milliseconds
- * @returns {Promise}
+ * Central API service for all backend communications
+ * This is where you'll implement your actual API calls
  */
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-/**
- * Process user query and return analysis results
- * @param {string} query - User's natural language query
- * @returns {Promise<Object>} - Analysis results
- */
-export const processQuery = async (query) => {
-  // Simulate API delay
-  await delay(2000);
-
-  // TODO: Replace with actual LLM API calls
-  // const parsedQuery = await callGeminiAPI('parse', query);
-  // const decision = await callGeminiAPI('evaluate', parsedQuery, documents);
-
-  // Simulated response based on query analysis
-  const mockResponse = generateMockResponse(query);
-  
-  return mockResponse;
-};
-
-/**
- * Generate mock response based on query content
- * @param {string} query - User query
- * @returns {Object} - Mock analysis response
- */
-const generateMockResponse = (query) => {
-  // Extract basic information from query for more realistic response
-  const extractedInfo = extractQueryInfo(query);
-  
-  return {
-    query_analysis: {
-      patient_age: extractedInfo.age || 46,
-      gender: extractedInfo.gender || "male",
-      procedure: extractedInfo.procedure || "knee surgery",
-      location: extractedInfo.location || "Pune",
-      policy_age: extractedInfo.policyAge || "3 months"
-    },
-    decision: determineDecision(extractedInfo),
-    coverage_amount: calculateCoverage(extractedInfo),
-    justification: generateJustification(extractedInfo),
-    relevant_clauses: [
-      "Clause 3.1: Pre-existing conditions coverage",
-      "Clause 3.3: Orthopedic surgery coverage limit"
-    ],
-    confidence_score: Math.random() * 0.3 + 0.7 // Random between 0.7-1.0
-  };
-};
-
-/**
- * Extract information from user query using simple pattern matching
- * @param {string} query - User query
- * @returns {Object} - Extracted information
- */
-const extractQueryInfo = (query) => {
-  const info = {};
-  
-  // Extract age
-  const ageMatch = query.match(/(\d+)[-\s]?year[-\s]?old/i);
-  if (ageMatch) info.age = parseInt(ageMatch[1]);
-  
-  // Extract gender
-  if (query.toLowerCase().includes('female') || query.toLowerCase().includes('woman')) {
-    info.gender = 'female';
-  } else if (query.toLowerCase().includes('male') || query.toLowerCase().includes('man')) {
-    info.gender = 'male';
+class ApiService {
+  constructor() {
+    // **CONFIGURATION SECTION**
+    // Replace these with your actual API endpoints
+    this.baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+    this.timeout = 30000; // 30 seconds
+    
+    // API Keys - Store in environment variables
+    this.apiKey = import.meta.env.VITE_API_KEY;
+    this.geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
   }
+
+  // ==================== HELPER METHODS ====================
   
-  // Extract procedure types
-  const procedures = ['surgery', 'operation', 'treatment', 'procedure', 'therapy'];
-  for (const proc of procedures) {
-    if (query.toLowerCase().includes(proc)) {
-      info.procedure = query.toLowerCase().includes('knee') ? 'knee surgery' :
-                      query.toLowerCase().includes('heart') ? 'heart surgery' :
-                      query.toLowerCase().includes('eye') ? 'eye surgery' :
-                      `${proc}`;
-      break;
+  /**
+   * Generic HTTP request method
+   * @param {string} endpoint - API endpoint
+   * @param {object} options - Request options
+   * @returns {Promise} - API response
+   */
+  async request(endpoint, options = {}) {
+    const url = `${this.baseURL}${endpoint}`;
+    
+    const config = {
+      timeout: this.timeout,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.apiKey}`,
+        ...options.headers
+      },
+      ...options
+    };
+
+    try {
+      console.log(`🌐 API Request: ${options.method || 'GET'} ${url}`);
+      
+      // **REPLACE WITH YOUR HTTP CLIENT**
+      // Example using fetch:
+      const response = await fetch(url, config);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('✅ API Response received');
+      
+      return data;
+      
+    } catch (error) {
+      console.error('❌ API Request failed:', error);
+      throw new Error(`API request failed: ${error.message}`);
     }
   }
+
+  // ==================== SESSION MANAGEMENT ====================
   
-  // Extract location
-  const cities = ['pune', 'mumbai', 'delhi', 'bangalore', 'chennai', 'kolkata'];
-  for (const city of cities) {
-    if (query.toLowerCase().includes(city)) {
-      info.location = city.charAt(0).toUpperCase() + city.slice(1);
-      break;
+  /**
+   * Initialize a new chat session
+   * @param {string} sessionId - Unique session identifier
+   * @returns {Promise<object>} - Session data
+   */
+  async initializeSession(sessionId) {
+    try {
+      // **BACKEND ENDPOINT: POST /sessions**
+      return await this.request('/sessions', {
+        method: 'POST',
+        body: JSON.stringify({
+          sessionId,
+          timestamp: new Date().toISOString(),
+          metadata: {
+            userAgent: navigator.userAgent,
+            platform: navigator.platform
+          }
+        })
+      });
+    } catch (error) {
+      console.error('Session initialization failed:', error);
+      // For now, return mock data to prevent app crashes
+      return { sessionId, status: 'initialized' };
     }
   }
-  
-  // Extract policy age
-  const policyMatch = query.match(/(\d+)[-\s]?(month|year)/i);
-  if (policyMatch) {
-    info.policyAge = `${policyMatch[1]} ${policyMatch[2]}${policyMatch[1] > 1 ? 's' : ''}`;
+
+  /**
+   * Get session history and context
+   * @param {string} sessionId - Session identifier
+   * @returns {Promise<object>} - Session data
+   */
+  async getSession(sessionId) {
+    // **BACKEND ENDPOINT: GET /sessions/{sessionId}**
+    return await this.request(`/sessions/${sessionId}`);
   }
-  
-  return info;
-};
 
-/**
- * Determine approval decision based on extracted information
- * @param {Object} info - Extracted query information
- * @returns {string} - Decision status
- */
-const determineDecision = (info) => {
-  // Simple logic for demo purposes
-  if (info.age && info.age > 80) return "REQUIRES_REVIEW";
-  if (info.policyAge && info.policyAge.includes('month') && parseInt(info.policyAge) < 6) {
-    return "CONDITIONAL_APPROVAL";
+  // ==================== FILE OPERATIONS ====================
+  
+  /**
+   * Delete a file from the session
+   * @param {string} fileId - File identifier
+   * @param {string} sessionId - Session identifier
+   * @returns {Promise<object>} - Deletion result
+   */
+  async deleteFile(fileId, sessionId) {
+    // **BACKEND ENDPOINT: DELETE /files/{fileId}**
+    return await this.request(`/files/${fileId}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ sessionId })
+    });
   }
-  return "APPROVED";
-};
 
-/**
- * Calculate coverage amount based on procedure and other factors
- * @param {Object} info - Extracted query information
- * @returns {string} - Coverage amount
- */
-const calculateCoverage = (info) => {
-  let baseAmount = 200000;
-  
-  if (info.procedure) {
-    if (info.procedure.includes('heart')) baseAmount = 500000;
-    else if (info.procedure.includes('knee')) baseAmount = 350000;
-    else if (info.procedure.includes('eye')) baseAmount = 150000;
+  /**
+   * Get file processing status
+   * @param {string} fileId - File identifier
+   * @returns {Promise<object>} - File status
+   */
+  async getFileStatus(fileId) {
+    // **BACKEND ENDPOINT: GET /files/{fileId}/status**
+    return await this.request(`/files/${fileId}/status`);
   }
-  
-  // Format as Indian currency
-  return `₹${baseAmount.toLocaleString('en-IN')}`;
-};
 
-/**
- * Generate justification text based on decision
- * @param {Object} info - Extracted query information
- * @returns {string} - Justification text
- */
-const generateJustification = (info) => {
-  const procedure = info.procedure || 'the requested procedure';
+  // ==================== QUERY PROCESSING ====================
   
-  return `Based on the health insurance policy guidelines, ${procedure} is covered under the applicable medical procedures. The patient meets the eligibility criteria including policy maintenance requirements and medical necessity standards.`;
-};
+  /**
+   * Process user query with AI
+   * @param {object} queryData - Query information
+   * @returns {Promise<object>} - AI response
+   */
+  async processQuery(queryData) {
+    const { query, sessionId, fileIds, context } = queryData;
+    
+    console.log('🤖 Processing query with AI:', { query, sessionId, fileIds });
 
-/**
- * Call Gemini API (placeholder for actual implementation)
- * @param {string} action - API action type
- * @param {string} query - User query
- * @param {Object} context - Additional context
- * @returns {Promise} - API response
- */
-export const callGeminiAPI = async (action, query, context = {}) => {
-  // TODO: Implement actual Gemini API calls
-  throw new Error('Gemini API integration not implemented yet');
-};
+    try {
+      // **BACKEND ENDPOINT: POST /queries/process**
+      // This is where you'll integrate with your LLM API (Gemini, OpenAI, etc.)
+      
+      const requestBody = {
+        query,
+        sessionId,
+        fileIds,
+        context,
+        timestamp: new Date().toISOString(),
+        options: {
+          includeConfidence: true,
+          includeSources: true,
+          maxTokens: 2000,
+          temperature: 0.7
+        }
+      };
 
-/**
- * Upload and process document
- * @param {File} file - Document file
- * @returns {Promise<Object>} - Processing result
- */
-export const uploadDocument = async (file) => {
-  // TODO: Implement document upload and processing
-  await delay(1500);
+      // **TEMPORARY MOCK RESPONSE**
+      // Replace this entire section with your actual API call
+      await this.delay(2000); // Simulate processing time
+      
+      return this.generateMockResponse(query, context);
+      
+      // **ACTUAL IMPLEMENTATION WOULD BE:**
+      // return await this.request('/queries/process', {
+      //   method: 'POST',
+      //   body: JSON.stringify(requestBody)
+      // });
+      
+    } catch (error) {
+      console.error('Query processing failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get query history for a session
+   * @param {string} sessionId - Session identifier
+   * @returns {Promise<array>} - Query history
+   */
+  async getQueryHistory(sessionId) {
+    // **BACKEND ENDPOINT: GET /sessions/{sessionId}/queries**
+    return await this.request(`/sessions/${sessionId}/queries`);
+  }
+
+  // ==================== LLM INTEGRATION METHODS ====================
   
-  return {
-    success: true,
-    filename: file.name,
-    size: file.size,
-    processed: true,
-    message: 'Document successfully processed and indexed for policy analysis'
-  };
-};
+  /**
+   * Call Gemini API for text analysis
+   * @param {string} prompt - Text prompt
+   * @param {object} options - API options
+   * @returns {Promise<object>} - Gemini response
+   */
+  async callGeminiAPI(prompt, options = {}) {
+    // **GEMINI API INTEGRATION**
+    // Replace with actual Gemini API call
+    
+    const geminiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+    
+    try {
+      const response = await fetch(`${geminiEndpoint}?key=${this.geminiApiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: options.temperature || 0.7,
+            topK: options.topK || 40,
+            topP: options.topP || 0.95,
+            maxOutputTokens: options.maxTokens || 2048,
+          },
+          safetySettings: [
+            {
+              category: "HARM_CATEGORY_HARASSMENT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+              category: "HARM_CATEGORY_HATE_SPEECH",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            }
+          ]
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Gemini API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.candidates[0]?.content?.parts[0]?.text || '';
+      
+    } catch (error) {
+      console.error('Gemini API call failed:', error);
+      throw error;
+    }
+  }
+
+  // ==================== UTILITY METHODS ====================
+  
+  /**
+   * Simulate API delay for development
+   * @param {number} ms - Delay in milliseconds
+   */
+  async delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Generate mock response for development
+   * @param {string} query - User query
+   * @param {object} context - Query context
+   * @returns {object} - Mock response
+   */
+  generateMockResponse(query, context) {
+    // Extract information from query
+    const info = this.extractQueryInfo(query);
+    
+    return {
+      decision: this.determineDecision(info),
+      coverage_amount: this.calculateCoverage(info),
+      justification: this.generateJustification(info, query),
+      confidence_score: Math.random() * 0.3 + 0.7,
+      claim_amount: "₹2,50,000",
+      deductible: "₹25,000",
+      sources: [
+        { document: "Policy Document", section: "3.1", relevance: 0.95 },
+        { document: "Terms & Conditions", section: "2.4", relevance: 0.87 }
+      ],
+      analysis: {
+        patient_age: info.age || 46,
+        procedure: info.procedure || "medical procedure",
+        location: info.location || "specified location",
+        policy_age: info.policyAge || "active policy"
+      }
+    };
+  }
+
+  /**
+   * Extract information from user query
+   * @param {string} query - User query
+   * @returns {object} - Extracted information
+   */
+  extractQueryInfo(query) {
+    const info = {};
+    
+    // Age extraction
+    const ageMatch = query.match(/(\d+)[-\s]?year[-\s]?old/i);
+    if (ageMatch) info.age = parseInt(ageMatch[1]);
+    
+    // Gender extraction
+    if (query.toLowerCase().includes('female')) info.gender = 'female';
+    else if (query.toLowerCase().includes('male')) info.gender = 'male';
+    
+    // Procedure extraction
+    const procedures = ['surgery', 'operation', 'treatment', 'procedure'];
+    for (const proc of procedures) {
+      if (query.toLowerCase().includes(proc)) {
+        info.procedure = query.toLowerCase().includes('knee') ? 'knee surgery' :
+                        query.toLowerCase().includes('heart') ? 'heart surgery' : proc;
+        break;
+      }
+    }
+    
+    // Location extraction
+    const cities = ['pune', 'mumbai', 'delhi', 'bangalore', 'chennai'];
+    for (const city of cities) {
+      if (query.toLowerCase().includes(city)) {
+        info.location = city.charAt(0).toUpperCase() + city.slice(1);
+        break;
+      }
+    }
+    
+    return info;
+  }
+
+  determineDecision(info) {
+    if (info.age && info.age > 80) return "REQUIRES_REVIEW";
+    return "APPROVED";
+  }
+
+  calculateCoverage(info) {
+    let baseAmount = 300000;
+    if (info.procedure?.includes('heart')) baseAmount = 500000;
+    else if (info.procedure?.includes('knee')) baseAmount = 350000;
+    return `₹${baseAmount.toLocaleString('en-IN')}`;
+  }
+
+  generateJustification(info, query) {
+    return `Based on the policy analysis for your query regarding ${info.procedure || 'the requested procedure'}, the decision has been made according to the coverage terms and eligibility criteria outlined in your policy documents.`;
+  }
+}
+
+// Export singleton instance
+export const apiService = new ApiService();
