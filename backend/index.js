@@ -55,13 +55,14 @@ const upload = multer({ storage: storage });
 // =================================================================
 
 /**
- * @route   POST api/chat/initiate
+ * @route   GET api/chat/initiate
  * @desc    Initializes a new chat session.
  * @access  Public
  */
-app.post('api/chat/initiate', async (req, res) => {
+app.get('/api/chat/initiate', async (req, res) => {
   console.log('Chat session initiated.');
   const session_id = `session_${uuidv4()}`;
+  console.log(session_id);
   const sessionData = {
     created_at: Date.now(),
     lastActive: Date.now(),

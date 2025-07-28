@@ -16,7 +16,7 @@ const PolicyAssistantApp = () => {
       try{
         const response = await fetch("http://localhost:3000/api/chat/initiate");
         if(!response.ok){
-          throw new Error(`server error: 4{response.status}`);
+          throw new Error(`server error: ${response.status}`);
         }
 
         const data = await response.json();
@@ -34,6 +34,7 @@ const PolicyAssistantApp = () => {
     };
 
     initiateSession();
+    console.log(localStorage.getItem("sessionId"));
   }, []);
 
   const handleFileUpload = async (file) => {
