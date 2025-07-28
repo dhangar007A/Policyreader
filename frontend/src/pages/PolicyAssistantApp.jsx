@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Brain, Sparkles, Shield, FileText, Zap, Upload, Send, Paperclip, X } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
 
 const PolicyAssistantApp = () => {
   const [query, setQuery] = useState('');
@@ -8,13 +9,61 @@ const PolicyAssistantApp = () => {
   const [error, setError] = useState('');
   const [documentsUploaded, setDocumentsUploaded] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [sessionId, setSessionId] = useState('')
 
-  const handleFileUpload = (file) => {
-    console.log(`handleFileUpload called for file: "${file.name}"`);
-    setDocumentsUploaded(true);
-    setUploadedFiles(prev => [...prev, file.name]);
-    setResponse(null);
-    setError('');
+  useEffect(() => {
+    const initiateSession = async () => {
+      try{
+        const response = await fetch("http://localhost:3000/api/chat/initiate");
+        if(!response.ok){
+          throw new Error(`server error: 4{response.status}`);
+        }
+
+        const data = await response.json();
+
+        if(data.sessionId){
+          setSessionId(data.sessionId);
+          localStorage.setItem('sessionId', data.sessionId);
+        }else{
+          throw new Error("NO session id returned from server");
+        }
+      }catch(err){
+        console.log('session inititaion failed:', err);
+        setError("Failed to start session. Please try again later.");
+      }
+    };
+
+    initiateSession();
+  }, []);
+
+  const handleFileUpload = async (file) => {
+    console.log(`Uploading file: "${file.name}"`);
+    const formData = new FormData();
+    formData.append("file", file); // 'file' should match what backend expects
+    formData.append("sessionId", localStorage.getItem("sessionId"))
+
+    try {
+      const response = await fetch("http://localhost:3000/upload", { //api call for file upload to backend
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Upload failed");
+      }
+
+      const data = await response.json();
+      console.log("Upload response:", data);
+
+      // Mark document uploaded
+      setDocumentsUploaded(true);
+      setUploadedFiles((prev) => [...prev, file.name]);
+      setResponse(null);
+      setError("");
+    } catch (err) {
+      console.error("Upload error:", err);
+      setError("File upload failed. Please try again.");
+    }
   };
 
   const removeFile = (index) => {

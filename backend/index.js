@@ -8,6 +8,8 @@ const axios = require('axios');
 const FormData = require('form-data');
 const fs = require('fs');
 const cors = require('cors');
+const redis = require('./redisClient');
+const {v4 : uuidv4 } = require('uuid');
 
 const app = express();
 const port = 3000;
@@ -53,17 +55,32 @@ const upload = multer({ storage: storage });
 // =================================================================
 
 /**
- * @route   POST /chat/initiate
+ * @route   POST api/chat/initiate
  * @desc    Initializes a new chat session.
  * @access  Public
  */
-app.post('/chat/initiate', (req, res) => {
+app.post('api/chat/initiate', async (req, res) => {
   console.log('Chat session initiated.');
-  // In a production environment, this would involve generating and persisting a unique session identifier.
-  res.status(200).json({
-    message: 'Chat session successfully initiated.',
-    sessionId: `session_${Date.now()}`
-  });
+  const session_id = `session_${uuidv4()}`;
+  const sessionData = {
+    created_at: Date.now(),
+    lastActive: Date.now(),
+    messages: [],
+  };
+
+  try {
+    await redis.set(session_id, JSON.stringify(sessionData), {
+      EX: 1800 // 30 minutes
+    });
+
+    res.status(200).json({
+      message: 'Chat session successfully initiated.',
+      sessionId: session_id,
+    });
+  } catch (error) {
+    console.error('Redis error:', error);
+    res.status(500).json({ error: 'Failed to create session' });
+  }
 });
 
 /**
